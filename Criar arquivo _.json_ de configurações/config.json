@@ -1,0 +1,20 @@
+{
+    "ip": "127.0.0.1",
+    "porta": 502,
+    "ccylim": 40,
+    "ctylim": 900,
+    "ctemplim": 100,
+    "cxlim": 100,
+    "tvylim": 80,
+    "tpylim": 100,
+    "ttemplim": 100,
+    "txlim": 100,
+    "bcylim": 40,
+    "btylim": 100,
+    "btemplim": 100,
+    "bxlim": 100,
+    "htorqueylim": 300,
+    "hempylim": 200,
+    "htemplim": 100,
+    "hxlim": 100
+}

@@ -1,0 +1,8 @@
+Pacotes utilizados:
+
+sqlalchemy
+pymodbustcp
+matplotlib
+pandas
+tabulate
+numpy
