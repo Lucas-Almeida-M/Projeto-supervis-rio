@@ -115,18 +115,18 @@ class PageOne(Frame):
 			'EE_202L':[0,1],
 			'IE_201L':[0,1],
 			'TE_201L':[0,1],
-			'TE_202L':[0.5,1],
+			'TE_202L':[0,1],
 			'EE_301L':[0,1],
-			'EE_302L':[0.5,1],
+			'EE_302L':[0,1],
 			'EE_303L':[0,1],
-			'IE_301L':[0.5,1],
+			'IE_301L':[0,1],
 			'IE_302L':[0,1],
 			'IE_303L':[0.5,1],
 			'TE_301L':[0,1],
 			'ST_301L':[0,1],
 			'WT_401L':[0,1],
 			'TE_401L':[0,1],
-			'WT_402L':[0.5,1],
+			'WT_402L':[0,1],
 			'TE_402L':[0,1],
 			'LG_DESL':[0,1],
 			'CLPL':[0,1],
@@ -356,11 +356,11 @@ class PageOne(Frame):
 								self.falhas.append(key)
 							if key in self.keys_turb and key not in self.falhas_turbina:
 								self.falhas_turbina.append(key)
-							elif key in self.keys_conv and key not in self.falhas_conversores:
+							if key in self.keys_conv and key not in self.falhas_conversores:
 								self.falhas_conversores.append(key)
-							elif key in self.keys_motor and key not in self.falhas_motorhelice:
+							if key in self.keys_motor and key not in self.falhas_motorhelice:
 								self.falhas_motorhelice.append(key)
-							elif key in self.keys_bat and key not in self.falhas_bateria:
+							if key in self.keys_bat and key not in self.falhas_bateria:
 								self.falhas_bateria.append(key)
 
 		except Exception as e:

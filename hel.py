@@ -312,6 +312,21 @@ class Helice( Frame ):
 			self.tempger = Label(self,text=tempger,font=("Arial", 14),foreground = '#f00')
 			self.tempger.place(x=570,y=120)
 		try:
-			self.falha.config(text = ",".join(falhas),fg='#f00')
+			if falhas[0] != 0:
+				texto = []
+				for n in range(len(falhas)):
+					if (n != 0 and n%3 == 0):
+						texto.append("\n")
+						texto.append(falhas[n])
+						texto.append(',')
+					elif ((len(falhas)%3 != 0) and n == (len(falhas)-1)):
+						texto.append(falhas[n])
+					elif len(falhas) == 3 and n == 2:
+						texto.append(falhas[n])
+					else: 
+						texto.append(falhas[n])
+						texto.append(',')
+				texto_falhas = ''.join(texto)
+				self.falha.config(text = "".join(texto_falhas),fg='#f00')
 		except:
-			self.falha.config(text = '------')
+			 pass
