@@ -312,7 +312,7 @@ class Helice( Frame ):
 			self.tempger = Label(self,text=tempger,font=("Arial", 14),foreground = '#f00')
 			self.tempger.place(x=570,y=120)
 		try:
-			if falhas[0] != 0:
+			if falhas != []:
 				texto = []
 				for n in range(len(falhas)):
 					if (n != 0 and n%3 == 0):
@@ -328,5 +328,7 @@ class Helice( Frame ):
 						texto.append(',')
 				texto_falhas = ''.join(texto)
 				self.falha.config(text = "".join(texto_falhas),fg='#f00')
+			else:
+				self.falha.config(text = "",fg='#000000')
 		except:
 			 pass

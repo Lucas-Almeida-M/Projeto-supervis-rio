@@ -72,65 +72,7 @@ class PageOne(Frame):
 		self.misc3 = 0
 		self.misc4 = 0
 
-		self.limites = {
-			'FT_001L':[0.5,1],
-			'FT_002L':[0,1],
-			'PT_001L':[0.5,1],
-			'PT_002L':[0,1],
-			'PT_003L':[0.5,1],
-			'PT_004L':[0,1],
-			'TE_001L':[0,1],
-			'TE_002L':[0,1],
-			'TE_003L':[0,1],
-			'TT_001L':[0,1],
-			'TT_002L':[0,1],
-			'TT_003L':[0,1],
-			'FZ_003L':[0,1],
-			'FZ_001L':[0,1],
-			'FZ_002L':[0,1],
-			'SV_001L':[0,1],
-			'SV_002L':[0,1],
-			'SV_003L':[0,1],
-			'SV_004L':[0,1],
-			'SV_005L':[0,1],
-			'SV_006L':[0,1],
-			'SV_007L':[0,1],
-			'SV_008L':[0,1],
-			'LSH_001L':[0,1],
-			'LSL_001L':[0,1],
-			'LSL_002L':[0,1],
-			'BY_001L':[0,1],
-			'FY_001L':[0,1],
-			'FY_002L':[0,1],
-			'FY_003L':[0,1],
-			'EE_101L':[0,1],
-			'EE_102L':[0,1],
-			'EE_103L':[0,1],
-			'IE_101L':[0,1],
-			'IE_102L':[0,1],
-			'IE_103L':[0,1],
-			'TE_101L':[0,1],
-			'SE_101L':[0,1],
-			'EE_201L':[0,1],
-			'EE_202L':[0,1],
-			'IE_201L':[0,1],
-			'TE_201L':[0,1],
-			'TE_202L':[0,1],
-			'EE_301L':[0,1],
-			'EE_302L':[0,1],
-			'EE_303L':[0,1],
-			'IE_301L':[0,1],
-			'IE_302L':[0,1],
-			'IE_303L':[0.5,1],
-			'TE_301L':[0,1],
-			'ST_301L':[0,1],
-			'WT_401L':[0,1],
-			'TE_401L':[0,1],
-			'WT_402L':[0,1],
-			'TE_402L':[0,1],
-			'LG_DESL':[0,1],
-			'CLPL':[0,1],
-		}
+		
 		self.keys_conv = ['IE_101','IE_102','IE_103','IE_301','IE_302','IE_303','EE_101','EE_102','EE_103','EE_301','EE_302','EE_303','TE_101','TE_301','TE_202','IE_201']
 		self.keys_turb = ['FT_001','FT_002','PT_001','PT_002','PT_003','PT_004','TT_001','TT_002','TT_003']
 		self.keys_bat = ['TE_202','IE_201','EE_202']
@@ -342,16 +284,24 @@ class PageOne(Frame):
 		"""
 		Método para leitura dos dados por meio do protocolo MODBUS
 		"""	
+		f = open('config.json','r')
+		configs = json.load(f)
+		f.close()
+
 		try:
 			if self._buscardados:
 				self._dados['timestamp'] = datetime.now()
 				self.falhas = []
+				self.falhas_turbina = []
+				self.falhas_bateria = []
+				self. falhas_conversores = []
+				self.falhas_motorhelice = []
 				for key,value in self._tags.items():
 					if value['addr'] > 1014 and value['addr'] < 1029:
 						self._dados['values'][key] = self._db.get_bits(value['addr'])[0]
 					else:
 						self._dados['values'][key] = self._db.get_words(value['addr'])[0]/value['multiplicador']
-						if (self._dados['values'][key] < self.limites[key + "L"][0] or self._dados['values'][key] > self.limites[key + "L"][1]):
+						if (self._dados['values'][key] < configs[key + "L"][0] or self._dados['values'][key] > configs[key + "L"][1]):
 							if key not in self.falhas:
 								self.falhas.append(key)
 							if key in self.keys_turb and key not in self.falhas_turbina:
@@ -647,7 +597,7 @@ class PageOne(Frame):
 		self.wconfig.grab_set()
 		self.wconfig.iconbitmap("./img/config.ico")
 		self.wconfig.title('Configurações')
-		self.wconfig.geometry("480x600+%d+%d"% ((self.controller.winfo_reqwidth()/2)-260,(self.controller.winfo_reqheight()/2)-280))
+		self.wconfig.geometry("500x600+%d+%d"% ((self.controller.winfo_reqwidth()/2)-260,(self.controller.winfo_reqheight()/2)-280))
 		self.wconfig.resizable(0,0)
 
 		n = Notebook(self.wconfig)
@@ -657,6 +607,7 @@ class PageOne(Frame):
 		f3 = Frame(n, width=480, height=500)   
 		f4 = Frame(n, width=480, height=500) 
 		f5 = Frame(n, width=480, height=500)   
+		f6 = Frame(n, width=480, height=500)
 
 		f = open('config.json','r')
 		configs = json.load(f)
@@ -664,14 +615,22 @@ class PageOne(Frame):
 
 
 		f1.pack(fill='both', expand=True)
-		lscan_time = Label(f1,text='Scan Time(ms)	:',font=("Arial", 14))
+		f1canvas = Canvas(f1)
+		f1canvas.pack(side=LEFT,fill=BOTH,expand=1)
+		scrollbarf1 = ttk.Scrollbar(f1,orient=VERTICAL,command=f1canvas.yview)
+		scrollbarf1.pack(side=RIGHT,fill=Y)
+		f1canvas.configure(yscrollcommand=scrollbarf1)
+		f1canvas.bind('<Configure>', lambda e: f1canvas.configure(scrollregion=f1canvas.bbox("all")))
+		second_framef1 = Frame(f1canvas)
+		f1canvas.create_window((0,0),window=second_framef1,anchor='ne')
+
+		lscan_time = Label(second_framef1,text='Scan Time(ms)	:',font=("Arial", 14))
 		lscan_time.grid(row=0,column=0,sticky='ew',pady=35,padx=35)
 		self.scan_tim = IntVar()
-		escan_time = Entry(f1, textvariable=self.scan_tim,width=20)
+		escan_time = Entry(second_framef1, textvariable=self.scan_tim,width=20)
 		escan_time.grid(row=0,column=1,sticky='ew',padx=30,pady=35)
 		escan_time.delete(0,END)
 		escan_time.insert(0,str(configs['scan_time']))
-
 
 		f2.pack(fill='both', expand=True) 
 		ltitulo = Label(f2,text='Limites Gráficos',font=("Arial bold", 18))
@@ -710,8 +669,6 @@ class PageOne(Frame):
 		etgrafx.grid(row=5,column=1,sticky='ew',padx=30,pady=35)
 		etgrafx.delete(0,END)
 		etgrafx.insert(0,str(configs['txlim']))
-
-
 
 		# Cria a página de configurações dos conversores
 		f3.pack(fill='both', expand=True)
@@ -834,15 +791,538 @@ class PageOne(Frame):
 		ehgrafx.insert(0,str(configs['hxlim']))
 		
 
+		f6.pack(fill='both', expand=True)
+		f6canvas = Canvas(f6)
+		f6canvas.pack(side=LEFT,fill=BOTH,expand=1)
+		scrollbarf6 = ttk.Scrollbar(f6,orient=VERTICAL,command=f6canvas.yview)
+		scrollbarf6.pack(side=RIGHT,fill=Y)
+		f6canvas.configure(yscrollcommand=scrollbarf6.set)
+		f6canvas.bind('<Configure>', lambda e: f6canvas.configure(scrollregion=f6canvas.bbox("all")))
+		second_framef6 = Frame(f6canvas)
+		f6canvas.create_window((0,0),window=second_framef6,anchor='ne')
 
+		titulo6 = Label(second_framef6,text='Tags',font=("Arial bold", 18))
+		titulo6.grid(row=0,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		titulomin = Label(second_framef6,text='Mínimo',font=("Arial bold", 18))
+		titulomin.grid(row=0,column=2,columnspan=2,sticky='ew',padx=25,pady=20)
+		titulomax = Label(second_framef6,text='Máximo',font=("Arial bold", 18))
+		titulomax.grid(row=0,column=4,columnspan=2,sticky='ew',padx=25,pady=20)
 
+		tituloturb = Label(second_framef6,text='Turbina',font=("Arial bold", 18))
+		tituloturb.grid(row=1,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+	
+		tag1 = Label(second_framef6,text='FT_001',font=("Arial bold", 12))
+		tag1.grid(row=2,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.FT_001min = IntVar()
+		tag1min = Entry(second_framef6, textvariable=self.FT_001min,width=10)
+		tag1min.grid(row=2,column=2,sticky='ew',padx=30,pady=35)
+		tag1min.delete(0,END)
+		tag1min.insert(0,str(configs['FT_001L'][0]))
+		self.FT_001max = IntVar()
+		tag1min = Entry(second_framef6, textvariable=self.FT_001max,width=10)
+		tag1min.grid(row=2,column=4,sticky='ew',padx=30,pady=35)
+		tag1min.delete(0,END)
+		tag1min.insert(0,str(configs['FT_001L'][1]))
+
+		tag2 = Label(second_framef6,text='FT_002',font=("Arial bold", 12))
+		tag2.grid(row=3,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.FT_002min = IntVar()
+		tag2min = Entry(second_framef6, textvariable=self.FT_002min,width=10)
+		tag2min.grid(row=3,column=2,sticky='ew',padx=30,pady=35)
+		tag2min.delete(0,END)
+		tag2min.insert(0,str(configs['FT_002L'][0]))
+		self.FT_002max = IntVar()
+		tag2min = Entry(second_framef6, textvariable=self.FT_002max,width=10)
+		tag2min.grid(row=3,column=4,sticky='ew',padx=30,pady=35)
+		tag2min.delete(0,END)
+		tag2min.insert(0,str(configs['FT_002L'][1]))
+
+		tag3 = Label(second_framef6,text='PT_001',font=("Arial bold", 12))
+		tag3.grid(row=4,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.PT_001min = IntVar()
+		tag3min = Entry(second_framef6, textvariable=self.PT_001min,width=10)
+		tag3min.grid(row=4,column=2,sticky='ew',padx=30,pady=35)
+		tag3min.delete(0,END)
+		tag3min.insert(0,str(configs['PT_001L'][0]))
+		self.PT_001max = IntVar()
+		tag3min = Entry(second_framef6, textvariable=self.PT_001max,width=10)
+		tag3min.grid(row=4,column=4,sticky='ew',padx=30,pady=35)
+		tag3min.delete(0,END)
+		tag3min.insert(0,str(configs['PT_001L'][1]))
+
+		tag4 = Label(second_framef6,text='PT_002',font=("Arial bold", 12))
+		tag4.grid(row=5,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.PT_002min = IntVar()
+		tag4min = Entry(second_framef6, textvariable=self.PT_002min,width=10)
+		tag4min.grid(row=5,column=2,sticky='ew',padx=30,pady=35)
+		tag4min.delete(0,END)
+		tag4min.insert(0,str(configs['PT_002L'][0]))
+		self.PT_002max = IntVar()
+		tag4min = Entry(second_framef6, textvariable=self.PT_002max,width=10)
+		tag4min.grid(row=5,column=4,sticky='ew',padx=30,pady=35)
+		tag4min.delete(0,END)
+		tag4min.insert(0,str(configs['PT_002L'][1]))
+
+		tag5 = Label(second_framef6,text='PT_003',font=("Arial bold", 12))
+		tag5.grid(row=6,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.PT_003min = IntVar()
+		tag5min = Entry(second_framef6, textvariable=self.PT_003min,width=10)
+		tag5min.grid(row=6,column=2,sticky='ew',padx=30,pady=35)
+		tag5min.delete(0,END)
+		tag5min.insert(0,str(configs['PT_003L'][0]))
+		self.PT_003max = IntVar()
+		tag5min = Entry(second_framef6, textvariable=self.PT_003max,width=10)
+		tag5min.grid(row=6,column=4,sticky='ew',padx=30,pady=35)
+		tag5min.delete(0,END)
+		tag5min.insert(0,str(configs['PT_003L'][1]))
+
+		tag6 = Label(second_framef6,text='PT_004',font=("Arial bold", 12))
+		tag6.grid(row=7,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.PT_004min = IntVar()
+		tag6min = Entry(second_framef6, textvariable=self.PT_004min,width=10)
+		tag6min.grid(row=7,column=2,sticky='ew',padx=30,pady=35)
+		tag6min.delete(0,END)
+		tag6min.insert(0,str(configs['PT_004L'][0]))
+		self.PT_004max = IntVar()
+		tag6min = Entry(second_framef6, textvariable=self.PT_004max,width=10)
+		tag6min.grid(row=7,column=4,sticky='ew',padx=30,pady=35)
+		tag6min.delete(0,END)
+		tag6min.insert(0,str(configs['PT_004L'][1]))
+
+		tag7 = Label(second_framef6,text='TT_001',font=("Arial bold", 12))
+		tag7.grid(row=8,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TT_001min = IntVar()
+		tag7min = Entry(second_framef6, textvariable=self.TT_001min,width=10)
+		tag7min.grid(row=8,column=2,sticky='ew',padx=30,pady=35)
+		tag7min.delete(0,END)
+		tag7min.insert(0,str(configs['TT_001L'][0]))
+		self.TT_001max = IntVar()
+		tag7min = Entry(second_framef6, textvariable=self.TT_001max,width=10)
+		tag7min.grid(row=8,column=4,sticky='ew',padx=30,pady=35)
+		tag7min.delete(0,END)
+		tag7min.insert(0,str(configs['TT_001L'][1]))
+
+		tag8 = Label(second_framef6,text='TT_002',font=("Arial bold", 12))
+		tag8.grid(row=9,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TT_002min = IntVar()
+		tag8min = Entry(second_framef6, textvariable=self.TT_002min,width=10)
+		tag8min.grid(row=9,column=2,sticky='ew',padx=30,pady=35)
+		tag8min.delete(0,END)
+		tag8min.insert(0,str(configs['TT_002L'][0]))
+		self.TT_002max = IntVar()
+		tag8min = Entry(second_framef6, textvariable=self.TT_002max,width=10)
+		tag8min.grid(row=9,column=4,sticky='ew',padx=30,pady=35)
+		tag8min.delete(0,END)
+		tag8min.insert(0,str(configs['TT_002L'][1]))
+
+		tag9 = Label(second_framef6,text='TT_003',font=("Arial bold", 12))
+		tag9.grid(row=10,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TT_003min = IntVar()
+		tag9min = Entry(second_framef6, textvariable=self.TT_003min,width=10)
+		tag9min.grid(row=10,column=2,sticky='ew',padx=30,pady=35)
+		tag9min.delete(0,END)
+		tag9min.insert(0,str(configs['TT_003L'][0]))
+		self.TT_003max = IntVar()
+		tag9min = Entry(second_framef6, textvariable=self.TT_003max,width=10)
+		tag9min.grid(row=10,column=4,sticky='ew',padx=30,pady=35)
+		tag9min.delete(0,END)
+		tag9min.insert(0,str(configs['TT_003L'][1]))
+
+		#Conversor
+
+		tituloconv = Label(second_framef6,text='Conversor',font=("Arial bold", 18))
+		tituloconv.grid(row=11,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+
+		tag10 = Label(second_framef6,text='IE_101',font=("Arial bold", 12))
+		tag10.grid(row=12,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_101min = IntVar()
+		tag10min = Entry(second_framef6, textvariable=self.IE_101min,width=10)
+		tag10min.grid(row=12,column=2,sticky='ew',padx=30,pady=35)
+		tag10min.delete(0,END)
+		tag10min.insert(0,str(configs['IE_101L'][0]))
+		self.IE_101max = IntVar()
+		tag10min = Entry(second_framef6, textvariable=self.IE_101max,width=10)
+		tag10min.grid(row=12,column=4,sticky='ew',padx=30,pady=35)
+		tag10min.delete(0,END)
+		tag10min.insert(0,str(configs['IE_101L'][1]))
+
+		tag11 = Label(second_framef6,text='IE_102',font=("Arial bold", 12))
+		tag11.grid(row=13,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_102min = IntVar()
+		tag11min = Entry(second_framef6, textvariable=self.IE_102min,width=10)
+		tag11min.grid(row=13,column=2,sticky='ew',padx=30,pady=35)
+		tag11min.delete(0,END)
+		tag11min.insert(0,str(configs['IE_102L'][0]))
+		self.IE_102max = IntVar()
+		tag11min = Entry(second_framef6, textvariable=self.IE_102max,width=10)
+		tag11min.grid(row=13,column=4,sticky='ew',padx=30,pady=35)
+		tag11min.delete(0,END)
+		tag11min.insert(0,str(configs['IE_102L'][1]))
+
+		tag12 = Label(second_framef6,text='IE_103',font=("Arial bold", 12))
+		tag12.grid(row=14,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_103min = IntVar()
+		tag12min = Entry(second_framef6, textvariable=self.IE_103min,width=10)
+		tag12min.grid(row=14,column=2,sticky='ew',padx=30,pady=35)
+		tag12min.delete(0,END)
+		tag12min.insert(0,str(configs['IE_103L'][0]))
+		self.IE_103max = IntVar()
+		tag12min = Entry(second_framef6, textvariable=self.IE_103max,width=10)
+		tag12min.grid(row=14,column=4,sticky='ew',padx=30,pady=35)
+		tag12min.delete(0,END)
+		tag12min.insert(0,str(configs['IE_103L'][1]))
+
+		tag13 = Label(second_framef6,text='EE_101',font=("Arial bold", 12))
+		tag13.grid(row=15,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_101min = IntVar()
+		tag13min = Entry(second_framef6, textvariable=self.EE_101min,width=10)
+		tag13min.grid(row=15,column=2,sticky='ew',padx=30,pady=35)
+		tag13min.delete(0,END)
+		tag13min.insert(0,str(configs['EE_101L'][0]))
+		self.EE_101max = IntVar()
+		tag13min = Entry(second_framef6, textvariable=self.EE_101max,width=10)
+		tag13min.grid(row=15,column=4,sticky='ew',padx=30,pady=35)
+		tag13min.delete(0,END)
+		tag13min.insert(0,str(configs['EE_101L'][1]))
+
+		tag14 = Label(second_framef6,text='EE_102',font=("Arial bold", 12))
+		tag14.grid(row=16,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_102min = IntVar()
+		tag14min = Entry(second_framef6, textvariable=self.EE_102min,width=10)
+		tag14min.grid(row=16,column=2,sticky='ew',padx=30,pady=35)
+		tag14min.delete(0,END)
+		tag14min.insert(0,str(configs['EE_102L'][0]))
+		self.EE_102max = IntVar()
+		tag14min = Entry(second_framef6, textvariable=self.EE_102max,width=10)
+		tag14min.grid(row=16,column=4,sticky='ew',padx=30,pady=35)
+		tag14min.delete(0,END)
+		tag14min.insert(0,str(configs['EE_102L'][1]))
+
+		tag15 = Label(second_framef6,text='EE_103',font=("Arial bold", 12))
+		tag15.grid(row=17,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_103min = IntVar()
+		tag15min = Entry(second_framef6, textvariable=self.EE_103min,width=10)
+		tag15min.grid(row=17,column=2,sticky='ew',padx=30,pady=35)
+		tag15min.delete(0,END)
+		tag15min.insert(0,str(configs['EE_103L'][0]))
+		self.EE_103max = IntVar()
+		tag15min = Entry(second_framef6, textvariable=self.EE_103max,width=10)
+		tag15min.grid(row=17,column=4,sticky='ew',padx=30,pady=35)
+		tag15min.delete(0,END)
+		tag15min.insert(0,str(configs['EE_103L'][1]))
+
+		tag16 = Label(second_framef6,text='IE_301',font=("Arial bold", 12))
+		tag16.grid(row=18,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_301min = IntVar()
+		tag16min = Entry(second_framef6, textvariable=self.IE_301min,width=10)
+		tag16min.grid(row=18,column=2,sticky='ew',padx=30,pady=35)
+		tag16min.delete(0,END)
+		tag16min.insert(0,str(configs['IE_301L'][0]))
+		self.IE_301max = IntVar()
+		tag16min = Entry(second_framef6, textvariable=self.IE_301max,width=10)
+		tag16min.grid(row=18,column=4,sticky='ew',padx=30,pady=35)
+		tag16min.delete(0,END)
+		tag16min.insert(0,str(configs['IE_301L'][1]))
+
+		tag17 = Label(second_framef6,text='IE_302',font=("Arial bold", 12))
+		tag17.grid(row=19,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_302min = IntVar()
+		tag17min = Entry(second_framef6, textvariable=self.IE_302min,width=10)
+		tag17min.grid(row=19,column=2,sticky='ew',padx=30,pady=35)
+		tag17min.delete(0,END)
+		tag17min.insert(0,str(configs['IE_302L'][0]))
+		self.IE_302max = IntVar()
+		tag17min = Entry(second_framef6, textvariable=self.IE_302max,width=10)
+		tag17min.grid(row=19,column=4,sticky='ew',padx=30,pady=35)
+		tag17min.delete(0,END)
+		tag17min.insert(0,str(configs['IE_302L'][1]))
+
+		tag18 = Label(second_framef6,text='IE_303',font=("Arial bold", 12))
+		tag18.grid(row=20,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_303min = IntVar()
+		tag18min = Entry(second_framef6, textvariable=self.IE_303min,width=10)
+		tag18min.grid(row=20,column=2,sticky='ew',padx=30,pady=35)
+		tag18min.delete(0,END)
+		tag18min.insert(0,str(configs['IE_303L'][0]))
+		self.IE_303max = IntVar()
+		tag18min = Entry(second_framef6, textvariable=self.IE_303max,width=10)
+		tag18min.grid(row=20,column=4,sticky='ew',padx=30,pady=35)
+		tag18min.delete(0,END)
+		tag18min.insert(0,str(configs['IE_303L'][1]))
+
+		tag19 = Label(second_framef6,text='EE_301',font=("Arial bold", 12))
+		tag19.grid(row=21,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_301min = IntVar()
+		tag19min = Entry(second_framef6, textvariable=self.EE_301min,width=10)
+		tag19min.grid(row=21,column=2,sticky='ew',padx=30,pady=35)
+		tag19min.delete(0,END)
+		tag19min.insert(0,str(configs['EE_301L'][0]))
+		self.EE_301max = IntVar()
+		tag19min = Entry(second_framef6, textvariable=self.EE_301max,width=10)
+		tag19min.grid(row=21,column=4,sticky='ew',padx=30,pady=35)
+		tag19min.delete(0,END)
+		tag19min.insert(0,str(configs['EE_301L'][1]))
+
+		tag20 = Label(second_framef6,text='EE_302',font=("Arial bold", 12))
+		tag20.grid(row=22,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_302min = IntVar()
+		tag20min = Entry(second_framef6, textvariable=self.EE_302min,width=10)
+		tag20min.grid(row=22,column=2,sticky='ew',padx=30,pady=35)
+		tag20min.delete(0,END)
+		tag20min.insert(0,str(configs['EE_302L'][0]))
+		self.EE_302max = IntVar()
+		tag20min = Entry(second_framef6, textvariable=self.EE_302max,width=10)
+		tag20min.grid(row=22,column=4,sticky='ew',padx=30,pady=35)
+		tag20min.delete(0,END)
+		tag20min.insert(0,str(configs['EE_302L'][1]))
+
+		tag21 = Label(second_framef6,text='EE_303',font=("Arial bold", 12))
+		tag21.grid(row=23,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_303min = IntVar()
+		tag21min = Entry(second_framef6, textvariable=self.EE_303min,width=10)
+		tag21min.grid(row=23,column=2,sticky='ew',padx=30,pady=35)
+		tag21min.delete(0,END)
+		tag21min.insert(0,str(configs['EE_303L'][0]))
+		self.EE_303max = IntVar()
+		tag21min = Entry(second_framef6, textvariable=self.EE_303max,width=10)
+		tag21min.grid(row=23,column=4,sticky='ew',padx=30,pady=35)
+		tag21min.delete(0,END)
+		tag21min.insert(0,str(configs['EE_303L'][1]))
+
+		tag22 = Label(second_framef6,text='EE_201',font=("Arial bold", 12))
+		tag22.grid(row=24,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_201min = IntVar()
+		tag22min = Entry(second_framef6, textvariable=self.EE_201min,width=10)
+		tag22min.grid(row=24,column=2,sticky='ew',padx=30,pady=35)
+		tag22min.delete(0,END)
+		tag22min.insert(0,str(configs['EE_201L'][0]))
+		self.EE_201max = IntVar()
+		tag22min = Entry(second_framef6, textvariable=self.EE_201max,width=10)
+		tag22min.grid(row=24,column=4,sticky='ew',padx=30,pady=35)
+		tag22min.delete(0,END)
+		tag22min.insert(0,str(configs['EE_201L'][1]))
+
+		tag23 = Label(second_framef6,text='EE_202',font=("Arial bold", 12))
+		tag23.grid(row=25,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_202min = IntVar()
+		tag23min = Entry(second_framef6, textvariable=self.EE_202min,width=10)
+		tag23min.grid(row=25,column=2,sticky='ew',padx=30,pady=35)
+		tag23min.delete(0,END)
+		tag23min.insert(0,str(configs['EE_202L'][0]))
+		self.EE_202max = IntVar()
+		tag23min = Entry(second_framef6, textvariable=self.EE_202max,width=10)
+		tag23min.grid(row=25,column=4,sticky='ew',padx=30,pady=35)
+		tag23min.delete(0,END)
+		tag23min.insert(0,str(configs['EE_202L'][1]))
+
+		tag24 = Label(second_framef6,text='TE_101',font=("Arial bold", 12))
+		tag24.grid(row=26,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_101min = IntVar()
+		tag24min = Entry(second_framef6, textvariable=self.TE_101min,width=10)
+		tag24min.grid(row=26,column=2,sticky='ew',padx=30,pady=35)
+		tag24min.delete(0,END)
+		tag24min.insert(0,str(configs['TE_101L'][0]))
+		self.TE_101max = IntVar()
+		tag24min = Entry(second_framef6, textvariable=self.TE_101max,width=10)
+		tag24min.grid(row=26,column=4,sticky='ew',padx=30,pady=35)
+		tag24min.delete(0,END)
+		tag24min.insert(0,str(configs['TE_101L'][1]))
+
+		tag25 = Label(second_framef6,text='TE_201',font=("Arial bold", 12))
+		tag25.grid(row=27,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_201min = IntVar()
+		tag25min = Entry(second_framef6, textvariable=self.TE_201min,width=10)
+		tag25min.grid(row=27,column=2,sticky='ew',padx=30,pady=35)
+		tag25min.delete(0,END)
+		tag25min.insert(0,str(configs['TE_201L'][0]))
+		self.TE_201max = IntVar()
+		tag25min = Entry(second_framef6, textvariable=self.TE_201max,width=10)
+		tag25min.grid(row=27,column=4,sticky='ew',padx=30,pady=35)
+		tag25min.delete(0,END)
+		tag25min.insert(0,str(configs['TE_201L'][1]))
+
+		tag26 = Label(second_framef6,text='TE_301',font=("Arial bold", 12))
+		tag26.grid(row=28,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_301min = IntVar()
+		tag26min = Entry(second_framef6, textvariable=self.TE_301min,width=10)
+		tag26min.grid(row=28,column=2,sticky='ew',padx=30,pady=35)
+		tag26min.delete(0,END)
+		tag26min.insert(0,str(configs['TE_301L'][0]))
+		self.TE_301max = IntVar()
+		tag26min = Entry(second_framef6, textvariable=self.TE_301max,width=10)
+		tag26min.grid(row=28,column=4,sticky='ew',padx=30,pady=35)
+		tag26min.delete(0,END)
+		tag26min.insert(0,str(configs['TE_301L'][1]))
+
+		tag27 = Label(second_framef6,text='TE_202',font=("Arial bold", 12))
+		tag27.grid(row=29,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_202min = IntVar()
+		tag27min = Entry(second_framef6, textvariable=self.TE_202min,width=10)
+		tag27min.grid(row=29,column=2,sticky='ew',padx=30,pady=35)
+		tag27min.delete(0,END)
+		tag27min.insert(0,str(configs['TE_202L'][0]))
+		self.TE_202max = IntVar()
+		tag27min = Entry(second_framef6, textvariable=self.TE_202max,width=10)
+		tag27min.grid(row=29,column=4,sticky='ew',padx=30,pady=35)
+		tag27min.delete(0,END)
+		tag27min.insert(0,str(configs['TE_202L'][1]))
+
+		tag28 = Label(second_framef6,text='IE_201',font=("Arial bold", 12))
+		tag28.grid(row=30,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_201min = IntVar()
+		tag28min = Entry(second_framef6, textvariable=self.IE_201min,width=10)
+		tag28min.grid(row=30,column=2,sticky='ew',padx=30,pady=35)
+		tag28min.delete(0,END)
+		tag28min.insert(0,str(configs['IE_201L'][0]))
+		self.IE_201max = IntVar()
+		tag28min = Entry(second_framef6, textvariable=self.IE_201max,width=10)
+		tag28min.grid(row=30,column=4,sticky='ew',padx=30,pady=35)
+		tag28min.delete(0,END)
+		tag28min.insert(0,str(configs['IE_201L'][1]))
+
+		tag29 = Label(second_framef6,text='SE_101',font=("Arial bold", 12))
+		tag29.grid(row=31,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.SE_101min = IntVar()
+		tag29min = Entry(second_framef6, textvariable=self.SE_101min,width=10)
+		tag29min.grid(row=31,column=2,sticky='ew',padx=30,pady=35)
+		tag29min.delete(0,END)
+		tag29min.insert(0,str(configs['SE_101L'][0]))
+		self.SE_101max = IntVar()
+		tag29min = Entry(second_framef6, textvariable=self.SE_101max,width=10)
+		tag29min.grid(row=31,column=4,sticky='ew',padx=30,pady=35)
+		tag29min.delete(0,END)
+		tag29min.insert(0,str(configs['SE_101L'][1]))
+
+		tag30 = Label(second_framef6,text='ST_301',font=("Arial bold", 12))
+		tag30.grid(row=32,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.ST_301min = IntVar()
+		tag30min = Entry(second_framef6, textvariable=self.ST_301min,width=10)
+		tag30min.grid(row=32,column=2,sticky='ew',padx=30,pady=35)
+		tag30min.delete(0,END)
+		tag30min.insert(0,str(configs['ST_301L'][0]))
+		self.ST_301max = IntVar()
+		tag30min = Entry(second_framef6, textvariable=self.ST_301max,width=10)
+		tag30min.grid(row=32,column=4,sticky='ew',padx=30,pady=35)
+		tag30min.delete(0,END)
+		tag30min.insert(0,str(configs['ST_301L'][1]))
+
+		# Bateria
+
+		titulobat = Label(second_framef6,text='Bateria',font=("Arial bold", 18))
+		titulobat.grid(row=33,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+
+		tag31 = Label(second_framef6,text='TE_202',font=("Arial bold", 12))
+		tag31.grid(row=34,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_202min = IntVar()
+		tag31min = Entry(second_framef6, textvariable=self.TE_202min,width=10)
+		tag31min.grid(row=34,column=2,sticky='ew',padx=30,pady=35)
+		tag31min.delete(0,END)
+		tag31min.insert(0,str(configs['TE_202L'][0]))
+		self.TE_202max = IntVar()
+		tag31min = Entry(second_framef6, textvariable=self.TE_202max,width=10)
+		tag31min.grid(row=34,column=4,sticky='ew',padx=30,pady=35)
+		tag31min.delete(0,END)
+		tag31min.insert(0,str(configs['TE_202L'][1]))
+
+		tag32 = Label(second_framef6,text='IE_201',font=("Arial bold", 12))
+		tag32.grid(row=35,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.IE_201min = IntVar()
+		tag32min = Entry(second_framef6, textvariable=self.IE_201min,width=10)
+		tag32min.grid(row=35,column=2,sticky='ew',padx=30,pady=35)
+		tag32min.delete(0,END)
+		tag32min.insert(0,str(configs['IE_201L'][0]))
+		self.IE_201max = IntVar()
+		tag32min = Entry(second_framef6, textvariable=self.IE_201max,width=10)
+		tag32min.grid(row=35,column=4,sticky='ew',padx=30,pady=35)
+		tag32min.delete(0,END)
+		tag32min.insert(0,str(configs['IE_201L'][1]))
+
+		tag33 = Label(second_framef6,text='EE_202',font=("Arial bold", 12))
+		tag33.grid(row=36,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.EE_202min = IntVar()
+		tag33min = Entry(second_framef6, textvariable=self.EE_202min,width=10)
+		tag33min.grid(row=36,column=2,sticky='ew',padx=30,pady=35)
+		tag33min.delete(0,END)
+		tag33min.insert(0,str(configs['EE_202L'][0]))
+		self.EE_202max = IntVar()
+		tag33min = Entry(second_framef6, textvariable=self.EE_202max,width=10)
+		tag33min.grid(row=36,column=4,sticky='ew',padx=30,pady=35)
+		tag33min.delete(0,END)
+		tag33min.insert(0,str(configs['EE_202L'][1]))
+
+		#Helice 
+
+		titulohel = Label(second_framef6,text='Helice',font=("Arial bold", 18))
+		titulohel.grid(row=37,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+
+		tag34 = Label(second_framef6,text='WT_402',font=("Arial bold", 12))
+		tag34.grid(row=38,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.WT_402min = IntVar()
+		tag34min = Entry(second_framef6, textvariable=self.WT_402min,width=10)
+		tag34min.grid(row=38,column=2,sticky='ew',padx=30,pady=35)
+		tag34min.delete(0,END)
+		tag34min.insert(0,str(configs['WT_402L'][0]))
+		self.WT_402max = IntVar()
+		tag34min = Entry(second_framef6, textvariable=self.WT_402max,width=10)
+		tag34min.grid(row=38,column=4,sticky='ew',padx=30,pady=35)
+		tag34min.delete(0,END)
+		tag34min.insert(0,str(configs['WT_402L'][1]))
+
+		tag35 = Label(second_framef6,text='WT_401',font=("Arial bold", 12))
+		tag35.grid(row=39,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.WT_401min = IntVar()
+		tag35min = Entry(second_framef6, textvariable=self.WT_401min,width=10)
+		tag35min.grid(row=39,column=2,sticky='ew',padx=30,pady=35)
+		tag35min.delete(0,END)
+		tag35min.insert(0,str(configs['WT_401L'][0]))
+		self.WT_401max = IntVar()
+		tag35min = Entry(second_framef6, textvariable=self.WT_401max,width=10)
+		tag35min.grid(row=39,column=4,sticky='ew',padx=30,pady=35)
+		tag35min.delete(0,END)
+		tag35min.insert(0,str(configs['WT_401L'][1]))
+
+		tag36 = Label(second_framef6,text='TE_401',font=("Arial bold", 12))
+		tag36.grid(row=40,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_401min = IntVar()
+		tag36min = Entry(second_framef6, textvariable=self.TE_401min,width=10)
+		tag36min.grid(row=40,column=2,sticky='ew',padx=30,pady=35)
+		tag36min.delete(0,END)
+		tag36min.insert(0,str(configs['TE_401L'][0]))
+		self.TE_401max = IntVar()
+		tag36min = Entry(second_framef6, textvariable=self.TE_401max,width=10)
+		tag36min.grid(row=40,column=4,sticky='ew',padx=30,pady=35)
+		tag36min.delete(0,END)
+		tag36min.insert(0,str(configs['TE_401L'][1]))
+
+		tag37 = Label(second_framef6,text='TE_402',font=("Arial bold", 12))
+		tag37.grid(row=41,column=0,columnspan=2,sticky='ew',padx=25,pady=20)
+		self.TE_402min = IntVar()
+		tag37min = Entry(second_framef6, textvariable=self.TE_402min,width=10)
+		tag37min.grid(row=41,column=2,sticky='ew',padx=30,pady=35)
+		tag37min.delete(0,END)
+		tag37min.insert(0,str(configs['TE_402L'][0]))
+		self.TE_402max = IntVar()
+		tag37min = Entry(second_framef6, textvariable=self.TE_402max,width=10)
+		tag37min.grid(row=41,column=4,sticky='ew',padx=30,pady=35)
+		tag37min.delete(0,END)
+		tag37min.insert(0,str(configs['TE_402L'][1]))
+
+		'''
+		Alarme1 = Label(second_framef1,text='Scan Time(ms)	:',font=("Arial", 14))
+		Alarme1.grid(row=0,column=0,sticky='ew',pady=35,padx=35)
+		self.scan_tim = IntVar()
+		escan_time = Entry(second_framef1, textvariable=self.scan_tim,width=20)
+		escan_time.grid(row=0,column=1,sticky='ew',padx=30,pady=35)
+		escan_time.delete(0,END)
+		escan_time.insert(0,str(configs['scan_time']))
+		'''
 
 		n.add(f1, text='Geral')
 		n.add(f2, text='Turb. Gás')
 		n.add(f3, text='Conversores')
 		n.add(f4, text='Baterias')
 		n.add(f5, text='Hélice')
-		# n.add(f6, text='Avançado')
+		n.add(f6, text='Alarmes')
 		lbranco = Label(self.wconfig,text='',font=("Arial", 14),padding=(80,0,0,0))
 		lbranco.grid(row=1,column=0,sticky=W)
 		# lbranco = Label(self.wconfig,text='',font=("Arial", 14),padding=(25,0,25,0))
@@ -890,10 +1370,96 @@ class PageOne(Frame):
 		configs['htemplim'] = self.hgraftemp.get()
 		configs['hxlim'] = self.hgrafx.get()
 
+		# Alarmes #
+
+		#Turbina
+		configs['FT_001L'][0] = self.FT_001min.get()
+		configs['FT_001L'][1] = self.FT_001max.get()
+		configs['FT_002L'][0] = self.FT_002min.get()
+		configs['FT_002L'][1] = self.FT_002max.get()
+		configs['PT_001L'][0] = self.PT_001min.get()
+		configs['PT_001L'][1] = self.PT_001max.get()
+		configs['PT_002L'][0] = self.PT_002min.get()
+		configs['PT_002L'][1] = self.PT_002max.get()
+		configs['PT_003L'][0] = self.PT_003min.get()
+		configs['PT_003L'][1] = self.PT_003max.get()
+		configs['PT_004L'][0] = self.PT_004min.get()
+		configs['PT_004L'][1] = self.PT_004max.get()
+		configs['TT_001L'][0] = self.TT_001min.get()
+		configs['TT_001L'][1] = self.TT_001max.get()
+		configs['TT_002L'][0] = self.TT_002min.get()
+		configs['TT_002L'][1] = self.TT_002max.get()
+		configs['TT_003L'][0] = self.TT_003min.get()
+		configs['TT_003L'][1] = self.TT_003max.get()
+
+		#Conversor
+		configs['IE_101L'][0] = self.IE_101min.get()
+		configs['IE_101L'][1] = self.IE_101max.get()
+		configs['IE_102L'][0] = self.IE_102min.get()
+		configs['IE_102L'][1] = self.IE_102max.get()
+		configs['IE_103L'][0] = self.IE_103min.get()
+		configs['IE_103L'][1] = self.IE_103max.get()
+		configs['EE_101L'][0] = self.EE_101min.get()
+		configs['EE_101L'][1] = self.EE_101max.get()
+		configs['EE_102L'][0] = self.EE_102min.get()
+		configs['EE_102L'][1] = self.EE_102max.get()
+		configs['EE_103L'][0] = self.EE_103min.get()
+		configs['EE_103L'][1] = self.EE_103max.get()
+		configs['IE_301L'][0] = self.IE_301min.get()
+		configs['IE_301L'][1] = self.IE_301max.get()
+		configs['IE_302L'][0] = self.IE_302min.get()
+		configs['IE_302L'][1] = self.IE_302max.get()
+		configs['IE_303L'][0] = self.IE_303min.get()
+		configs['IE_303L'][1] = self.IE_303max.get()
+		configs['EE_301L'][0] = self.EE_301min.get()
+		configs['EE_301L'][1] = self.EE_301max.get()
+		configs['EE_302L'][0] = self.EE_302min.get()
+		configs['EE_302L'][1] = self.EE_302max.get()
+		configs['EE_303L'][0] = self.EE_303min.get()
+		configs['EE_303L'][1] = self.EE_303max.get()
+		configs['EE_201L'][0] = self.EE_201min.get()
+		configs['EE_201L'][1] = self.EE_201max.get()
+		configs['EE_202L'][0] = self.EE_202min.get()
+		configs['EE_202L'][1] = self.EE_202max.get()
+		configs['TE_101L'][0] = self.TE_101min.get()
+		configs['TE_101L'][1] = self.TE_101max.get()
+		configs['TE_201L'][0] = self.TE_201min.get()
+		configs['TE_201L'][1] = self.TE_201max.get()
+		configs['TE_301L'][0] = self.TE_301min.get()
+		configs['TE_301L'][1] = self.TE_301max.get()
+		configs['TE_202L'][0] = self.TE_202min.get()
+		configs['TE_202L'][1] = self.TE_202max.get()
+		configs['IE_201L'][0] = self.IE_201min.get()
+		configs['IE_201L'][1] = self.IE_201max.get()
+		configs['SE_101L'][0] = self.SE_101min.get()
+		configs['SE_101L'][1] = self.SE_101max.get()
+		configs['ST_301L'][0] = self.ST_301min.get()
+		configs['ST_301L'][1] = self.ST_301max.get()
+
+		#Bateria
+		configs['TE_202L'][0] = self.TE_202min.get()
+		configs['TE_202L'][1] = self.TE_202max.get()
+		configs['IE_201L'][0] = self.IE_201min.get()
+		configs['IE_201L'][1] = self.IE_201max.get()
+		configs['EE_202L'][0] = self.EE_202min.get()
+		configs['EE_202L'][1] = self.EE_202max.get()
+		#Hélice
+		configs['WT_402L'][0] = self.WT_402min.get()
+		configs['WT_402L'][1] = self.WT_402max.get()
+		configs['WT_401L'][0] = self.WT_401min.get()
+		configs['WT_401L'][1] = self.WT_401max.get()
+		configs['TE_401L'][0] = self.TE_401min.get()
+		configs['TE_401L'][1] = self.TE_401max.get()
+		configs['TE_402L'][0] = self.TE_402min.get()
+		configs['TE_402L'][1] = self.TE_402max.get()
+
+
+
 		self.controller.frames['Conversores'].set_c(self.cgrafc.get(),self.cgraft.get(),self.cgraftemp.get(),self.cgrafx.get())
 		self.controller.frames['Bateria'].set_b(self.bgrafc.get(),self.bgraft.get(),self.bgraftemp.get(),self.bgrafx.get())
 		self.controller.frames['Helice'].set_h(self.hgraftorque.get(),self.hgrafemp.get(),self.hgraftemp.get(),self.hgrafx.get())
 		self.controller.frames['Turbina'].set_t(self.tgrafvazao.get(),self.tgrafp.get(),self.tgraftemp.get(),self.tgrafx.get())
+		# self.FT_001max.get(),self.FT_002min.get(),self.FT_002max.get(),self.PT_001min.get(),self.PT_001max.get(),self.PT_002min.get(),self.PT_002max.get(),self.PT_003min.get(),self.PT_003max.get(),self.PT_004min.get(),self.PT_004max.get(),self.TT_001min.get(),self.TT_001max.get(),self.TT_002min.get(),self.TT_002max.get(),self.TT_003min.get(),self.TT_003max.get(),self.IE_101min.get(),self.IE_101max.get(),self.IE_102min.get(),self.IE_102max.get(),self.IE_103min.get(),self.EE_101min.get(),self.EE_101max.get(),self.EE_102min.get(),self.EE_102max.get(),self.EE_103min.get(),self.EE_103max.get(),self.IE_301min.get(),self.IE_301max.get(),self.IE_302min.get(),self.IE_302max.get(),self.IE_303min.get(),self.IE_303max.get(),self.EE_301min.get(),self.EE_301max.get(),self.EE_302min.get(),self.EE_302max.get(),self.EE_303min.get(),self.EE_303max.get(),self.EE_201min.get(),self.EE_201max.get(),self.EE_202min.get(),self.EE_202max.get(),self.TE_101min.get(),self.TE_101max.get(),self.TE_201min.get(),self.TE_201max.get(),self.TE_301min.get(),self.TE_301max.get(),self.TE_202min.get(),self.TE_202max.get(),self.IE_201min.get(),self.IE_201max.get(),self.SE_101min.get(),self.SE_101max.get(),self.ST_301min.get(),self.ST_301max.get(),self.TE_202min.get(),self.TE_202max.get(),self.IE_201min.get(),self.IE_201max.get(),self.EE_202min.get(),self.EE_202max.get(),self.WT_402min.get(),self.WT_402max.get(),self.WT_401min.get(),self.WT_401max.get(),self.TE_401min.get(),self.TE_401max.get(),self.TE_402min.get(),self.TE_402max.get()
 		self.scan_time = self.scan_tim.get() 
 
 		f = open('config.json','w')

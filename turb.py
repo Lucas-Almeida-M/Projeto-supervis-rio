@@ -515,7 +515,7 @@ class Turbina ( Frame ):
 			self.tempcompr.grid(row=8,column=2,padx=30,sticky='ew')
 		
 		try:
-			if falhas[0] != 0:
+			if falhas != []:
 				texto = []
 				for n in range(len(falhas)):
 					if (n != 0 and n%3 == 0):
@@ -531,5 +531,7 @@ class Turbina ( Frame ):
 						texto.append(',')
 				texto_falhas = ''.join(texto)
 				self.falha.config(text = "".join(texto_falhas),fg='#f00')
+			else:
+				self.falha.config(text = "",fg='#000000')
 		except:
 			pass 
